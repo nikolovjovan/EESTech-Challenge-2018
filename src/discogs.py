@@ -74,63 +74,69 @@ def parse(country, filename, db):
         with open(filename, "r") as f:
             for line in f:
                 url = "http://www.discogs.com" + line[6:-2]
-                print('\n' + url)
+                #print('\n' + url)
                 response = requests.get(url, headers = myheaders)
                 page = str(BeautifulSoup(response.content, "html5lib"))
 
                 Name = ""
                 for r in re.findall(r'<span itemprop=\"name\">[\n].*', page):
                     Name = r[67:] # ReleaseName
-                    print("Name: " + Name)
+                    #print("Name: " + Name)
 
                 Formats = ""
-                print("\nFormats:")
+                #print("\nFormats:")
                 for r in re.findall(r'format_exact=.*</a>', page):
                     for formats in re.findall(r'>.*<',r):
                         Formats += formats[1:-1] + ", "
-                        print(formats[1:-1]) # Format
+                        #print(formats[1:-1]) # Format
                 Formats = Formats[:-2]
 
-                print("\nCountry: " + country)
+                #print("\nCountry: " + country)
 
                 Released = ""
-                print("\nReleased/Year: ")
+                #print("\nReleased/Year: ")
                 for r in re.findall(r'&amp;year=[0-9]+', page):
                     for year in re.findall(r'[0-9]+',r):
                         Released = year
-                        print(year) # Released/Year
+                        #print(year) # Released/Year
 
-                print("\n" + Name + " " + Formats + " " + Released)
+                #print("\n" + Name + " " + Formats + " " + Released)
 
                 # Try to execute a command.
-                cmd = "insert into releases(name,format,country,released) values('%s','%s','%s',%s)"%(Name, Formats, country, Released)
-                print(cmd)
-                exec_commit(db, cursor, cmd)
+                exec_commit(db, cursor, "insert into releases(name,format,country,released) values('%s','%s','%s',%s)"%(Name, Formats, country, Released))
+                ReleaseID = cursor.lastrowid
 
-                print("\nCredits:")
+                #print("\nCredits:")
                 for r in re.findall(r'/artist/.*\">.*</a>', page):
                     for credit in re.findall(r'>[^<]*</a>',r):
-                        print(credit[1:-4]) # Single Credit
+                        credit = credit[1:-4]
+                        exec_commit(db, cursor, "insert into credits(releaseid,name) values(%s,'%s')"%(ReleaseID, credit))
+                        #print(credit[1:-4]) # Single Credit
 
-                print("\nSongs:")
+                #print("\nSongs:")
                 songs = []
                 for r in re.findall(r'tracklist_track_title\"[^<]*</span>', page):
                     for song in re.findall(r'>[^<]*</span>',r):
                         songs.insert(len(songs), song[1:-7]) # Single Song Name
                 i = 0
                 for duration in re.findall(r'<meta content=\"([^\"]*)\" itemprop=\"duration\".*', page):
-                    print(songs[i] + " " + duration)
+                    #print(songs[i] + " " + duration)
+                    exec_commit(db, cursor, "insert into songs(releaseid,name,duration) values(%s,'%s','%s')"%(ReleaseID, songs[i], duration))
                     i += 1
 
-                print("\nGenres:")
+                #print("\nGenres:")
                 for r in re.findall(r'a href=\"/genre/.*>.*</a>', page):
                     for genre in re.findall(r'>[^>]*</a>',r):
-                        print(genre[1:-4]) # Single Genre
+                        genre = genre[1:-4]
+                        exec_commit(db, cursor, "insert into genres(releaseid,name) values(%s,'%s')"%(ReleaseID, genre))
+                        #print(genre[1:-4]) # Single Genre
 
-                print("\nStyles:")
+                #print("\nStyles:")
                 for r in re.findall(r'a href=\"/style/.*>.*</a>', page):
                     for style in re.findall(r'>[^>]*</a>',r):
-                        print(style[1:-4]) # Single Style
+                        style = style[1:-4]
+                        exec_commit(db, cursor, "insert into styles(releaseid,name) values(%s,'%s')"%(ReleaseID, style))
+                        #print(style[1:-4]) # Single Style
     return
 
 # Crawl the website for music and outputs to files.
@@ -186,7 +192,7 @@ def parse_all():
     return
 
 # Open a database connection.
-db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="pdb", charset="utf8")
+db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="test", charset="utf8")
 
 # Parse test file "TEST"...
 parse("TEST", "TEST", db)
