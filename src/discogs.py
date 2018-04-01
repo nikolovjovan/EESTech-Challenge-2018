@@ -9,6 +9,7 @@ myheaders = {
     'User-Agent': 'Discogs crawler 1.0',
 }
 
+# Execute a SQL command and commit.
 def exec_commit(db, cursor, command):
     try:
         # Execute the SQL command.
@@ -18,7 +19,9 @@ def exec_commit(db, cursor, command):
     except:
         # Rollback in case there is any error.
         db.rollback()
+    return
 
+# Crawl the page for the specified country and push to a file.
 def crawl(country, filename):
     if not os.path.exists('./' + filename):
         file = open(filename, "w")
@@ -58,65 +61,117 @@ def crawl(country, filename):
                 sortway = 'desc'
         file.close()
     print(country + " done!")
+    return
 
-def parse(filename, db):
-    with open("", "r") as f:
-        for line in f:
-            url = "http://www.discogs.com" + line[6:-2]
-            response = requests.get(url, headers = myheaders)
-            page = str(BeautifulSoup(response.content, "html5lib"))
-            for r in re.findall(r'&amp;year=[0-9]+', page):
-                for year in re.findall(r'[0-9]+',r):
-                    print(year)
+# Parse the pages from the files.
+def parse(country, filename, db):
+    if not os.path.exists('./' + filename):
+        print(filename + " does not exist!")
+    else:
+        with open(filename, "r") as f:
+            for line in f:
+                url = "http://www.discogs.com" + line[6:-2]
+                print('\n' + url)
+                response = requests.get(url, headers = myheaders)
+                page = str(BeautifulSoup(response.content, "html5lib"))
+                for r in re.findall(r'<span itemprop=\"name\">[\n].*', page):
+                    print("Name: " + r[67:]) # Name
 
-# Crawl the website for music.
+                print("\nFormats:")
+                for r in re.findall(r'format_exact=.*</a>', page):
+                    for formats in re.findall(r'>.*<',r):
+                        print(formats[1:-1]) # Format
 
-#crawl("Serbia", "Serbia")
-#crawl("Montenegro", "Montenegro")
-#crawl("Slovenia", "Slovenia")
-#crawl("Croatia", "Croatia")
-#crawl("Bosnia+%26+Herzegovina", "Bosnia")
-#crawl("Macedonia", "Macedonia")
+                print("\nCountry: " + country)
 
-threads = []
-t1 = threading.Thread(target=crawl, args=("Serbia", "Serbia", ))
-t2 = threading.Thread(target=crawl, args=("Montenegro", "Montenegro", ))
-t3 = threading.Thread(target=crawl, args=("Slovenia", "Slovenia", ))
-t4 = threading.Thread(target=crawl, args=("Croatia", "Croatia", ))
-t5 = threading.Thread(target=crawl, args=("Bosnia+%26+Herzegovina", "Bosnia", ))
-t6 = threading.Thread(target=crawl, args=("Macedonia", "Macedonia", ))
-threads.append(t1)
-threads.append(t2)
-threads.append(t3)
-threads.append(t4)
-threads.append(t5)
-threads.append(t6)
-t1.start()
-t2.start()
-t3.start()
-t4.start()
-t5.start()
-t6.start()
+                print("\nReleased/Year: ")
+                for r in re.findall(r'&amp;year=[0-9]+', page):
+                    for year in re.findall(r'[0-9]+',r):
+                        print(year) # Released/Year
 
-## Open a database connection.
-#db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="eestech")
-#
-## Prepare a cursor object using cursor() method.
-#cursor = db.cursor()
-#
-## Try to execute a command.
-#exec_commit(db, cursor, """insert into releases(name,format,country,released) values(%s,%s,%s,%d)"""%("'testname'","'testformat'","'testcountry'",12345))
-#
-## Get all releases.
-#cursor.execute("""select * from releases;""")
-#print(cursor.fetchall())
-#
-## Remove all releases.
-#exec_commit(db, cursor, """delete from releases;""")
-#
-## Get all releases.
-#cursor.execute("""select * from releases;""")
-#print(cursor.fetchall())
-#
-## Disconnect from the server.
-#db.close()
+                print("\nCredits:")
+                for r in re.findall(r'/artist/.*\">.*</a>', page):
+                    for credit in re.findall(r'>[^<]*</a>',r):
+                        print(credit[1:-4]) # Single Credit
+
+                print("\nSongs:")
+                songs = []
+                for r in re.findall(r'tracklist_track_title\"[^<]*</span>', page):
+                    for song in re.findall(r'>[^<]*</span>',r):
+                        songs.insert(len(songs), song[1:-7]) # Single Song Name
+                i = 0
+                for duration in re.findall(r'<meta content=\"([^\"]*)\" itemprop=\"duration\".*', page):
+                    print(songs[i] + " " + duration)
+                    i += 1
+
+                print("\nGenres:")
+                for r in re.findall(r'a href=\"/genre/.*>.*</a>', page):
+                    for genre in re.findall(r'>[^>]*</a>',r):
+                        print(genre[1:-4]) # Single Genre
+
+                print("\nStyles:")
+                for r in re.findall(r'a href=\"/style/.*>.*</a>', page):
+                    for style in re.findall(r'>[^>]*</a>',r):
+                        print(style[1:-4]) # Single Style
+    return
+
+# Crawl the website for music and outputs to files.
+def crawl_all():
+    threads = []
+    t1 = threading.Thread(target=crawl, args=("Serbia", "Serbia", ))
+    t2 = threading.Thread(target=crawl, args=("Montenegro", "Montenegro", ))
+    t3 = threading.Thread(target=crawl, args=("Slovenia", "Slovenia", ))
+    t4 = threading.Thread(target=crawl, args=("Croatia", "Croatia", ))
+    t5 = threading.Thread(target=crawl, args=("Bosnia+%26+Herzegovina", "Bosnia", ))
+    t6 = threading.Thread(target=crawl, args=("Macedonia", "Macedonia", ))
+    threads.append(t1)
+    threads.append(t2)
+    threads.append(t3)
+    threads.append(t4)
+    threads.append(t5)
+    threads.append(t6)
+    t1.start()
+    t2.start()
+    t3.start()
+    t4.start()
+    t5.start()
+    t6.start()
+    return
+
+# Parses all the links and outputs to the SQL database.
+def parse_all():
+    # Open a database connection.
+    db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="eestech")
+
+    threads = []
+    t1 = threading.Thread(target=parse, args=("Serbia", "Serbia", db, ))
+    t2 = threading.Thread(target=parse, args=("Montenegro", "Montenegro", db, ))
+    t3 = threading.Thread(target=parse, args=("Slovenia", "Slovenia", db, ))
+    t4 = threading.Thread(target=parse, args=("Croatia", "Croatia", db, ))
+    t5 = threading.Thread(target=parse, args=("Bosnia & Herzegovina", "Bosnia", db, ))
+    t6 = threading.Thread(target=parse, args=("Macedonia", "Macedonia", db, ))
+    threads.append(t1)
+    threads.append(t2)
+    threads.append(t3)
+    threads.append(t4)
+    threads.append(t5)
+    threads.append(t6)
+#    t1.start()
+    t2.start()
+#    t3.start()
+#    t4.start()
+#    t5.start()
+#    t6.start()
+
+    # Disconnect from the server.
+    db.close()
+    return
+
+# Open a database connection.
+db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="eestech")
+
+# Try parse Montenegro...
+parse("Montenegro", "Montenegro", db)
+
+# Disconnect from the server.
+db.close()
