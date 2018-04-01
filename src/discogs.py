@@ -64,10 +64,12 @@ def crawl(country, filename):
     return
 
 # Parse the pages from the files.
-def parse(country, filename, db):
+def parse(country, filename):
     if not os.path.exists('./' + filename):
         print(filename + " does not exist!")
     else:
+        # Open a database connection.
+        db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="pdb", charset="utf8")
         # Prepare a cursor object using cursor() method.
         cursor = db.cursor()
         # Parse the file with hyperlinks...
@@ -137,6 +139,8 @@ def parse(country, filename, db):
                         style = style[1:-4]
                         exec_commit(db, cursor, "insert into styles(releaseid,name) values(%s,'%s')"%(ReleaseID, style))
                         #print(style[1:-4]) # Single Style
+        # Disconnect from the server.
+        db.close()
     return
 
 # Crawl the website for music and outputs to files.
@@ -164,16 +168,13 @@ def crawl_all():
 
 # Parses all the links and outputs to the SQL database.
 def parse_all():
-    # Open a database connection.
-    db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="pdb", charset="utf8")
-
     threads = []
-    t1 = threading.Thread(target=parse, args=("Serbia", "Serbia", db, ))
-    t2 = threading.Thread(target=parse, args=("Montenegro", "Montenegro", db, ))
-    t3 = threading.Thread(target=parse, args=("Slovenia", "Slovenia", db, ))
-    t4 = threading.Thread(target=parse, args=("Croatia", "Croatia", db, ))
-    t5 = threading.Thread(target=parse, args=("Bosnia & Herzegovina", "Bosnia", db, ))
-    t6 = threading.Thread(target=parse, args=("Macedonia", "Macedonia", db, ))
+    t1 = threading.Thread(target=parse, args=("Serbia", "Serbia", ))
+    t2 = threading.Thread(target=parse, args=("Montenegro", "Montenegro", ))
+    t3 = threading.Thread(target=parse, args=("Slovenia", "Slovenia", ))
+    t4 = threading.Thread(target=parse, args=("Croatia", "Croatia", ))
+    t5 = threading.Thread(target=parse, args=("Bosnia & Herzegovina", "Bosnia", ))
+    t6 = threading.Thread(target=parse, args=("Macedonia", "Macedonia", ))
     threads.append(t1)
     threads.append(t2)
     threads.append(t3)
@@ -184,18 +185,9 @@ def parse_all():
     t2.start()
 #    t3.start()
 #    t4.start()
-#    t5.start()
+    t5.start()
 #    t6.start()
-
-    # Disconnect from the server.
-    db.close()
     return
 
-# Open a database connection.
-db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="test", charset="utf8")
-
-# Parse test file "TEST"...
-parse("TEST", "TEST", db)
-
-# Disconnect from the server.
-db.close()
+# Parse Montenegro and Bosnia & Herzegovina in parallel, not enough time to parse all the countries... :(
+parse_all()
