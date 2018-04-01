@@ -64,6 +64,41 @@ cursor.execute("""
                """)
 print("2.d.1)\n" + str(cursor.fetchall()))
 
+# The database does not contain all the necessary attributes for querying vocals and writing&arrangements.
+# The following code specifies the queries which could be used if the database contained the required attributes.
+
+#cursor.execute("""
+#               select name, count(name) as count
+#               from credits
+#               where vocals = 1
+#               group by name
+#               having count(name) >=
+#               (
+#               select count(name)
+#               from credits
+#               group by name
+#               order by count(name) desc
+#               limit 49,1
+#               )
+#               order by count(name) desc
+#               """)
+
+#cursor.execute("""
+#               select name, count(name) as count
+#               from credits
+#               where wanda = 1
+#               group by name
+#               having count(name) >=
+#               (
+#               select count(name)
+#               from credits
+#               group by name
+#               order by count(name) desc
+#               limit 49,1
+#               )
+#               order by count(name) desc
+#               """)
+
 cursor.execute("""
                select s.name, r.format, r.country, r.released, g.name, st.name, count(s.name)
                from songs s
@@ -72,6 +107,7 @@ cursor.execute("""
                join styles st on s.ReleaseID = st.ReleaseID
                order by count(s.name) desc
                """)
+
 print("2.e)\n" + str(cursor.fetchall()))
 
 cursor.execute("""
@@ -102,6 +138,47 @@ cursor.execute("""
                order by count(name) desc
                """)
 print("3.b)\n" + str(cursor.fetchall()))
+
+cursor.execute("""
+               select cnt1, cnt2, cnt3, cnt4, cnt5, cnt6
+               from
+               (
+               select count(*) as cnt1
+               from songs
+               where strcmp(duration, 'PT0H01M31S') = -1
+               ) table1
+               join
+               (
+               select count(*) as cnt2
+               from songs
+               where strcmp(duration, 'PT0H01M30S') = 1 and strcmp(duration, 'PT0H03M01S') = -1
+               ) table2
+               join
+               (
+               select count(*) as cnt3
+               from songs
+               where strcmp(duration, 'PT0H03M00S') = 1 and strcmp(duration, 'PT0H04M01S') = -1
+               ) table3
+               join
+               (
+               select count(*) as cnt4
+               from songs
+               where strcmp(duration, 'PT0H04M00S') = 1 and strcmp(duration, 'PT0H05M01S') = -1
+               ) table4
+               join
+               (
+               select count(*) as cnt5
+               from songs
+               where strcmp(duration, 'PT0H05M00S') = 1 and strcmp(duration, 'PT0H06M01S') = -1
+               ) table5
+               join
+               (
+               select count(*) as cnt6
+               from songs
+               where strcmp(duration, 'PT0H06M00S') = 1
+               ) table6
+               """)
+print("3.c)\n" + str(cursor.fetchall()))
 
 cursor.execute("""
                select count(HCount) as whatever
