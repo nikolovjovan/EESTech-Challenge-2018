@@ -68,26 +68,44 @@ def parse(country, filename, db):
     if not os.path.exists('./' + filename):
         print(filename + " does not exist!")
     else:
+        # Prepare a cursor object using cursor() method.
+        cursor = db.cursor()
+        # Parse the file with hyperlinks...
         with open(filename, "r") as f:
             for line in f:
                 url = "http://www.discogs.com" + line[6:-2]
                 print('\n' + url)
                 response = requests.get(url, headers = myheaders)
                 page = str(BeautifulSoup(response.content, "html5lib"))
-                for r in re.findall(r'<span itemprop=\"name\">[\n].*', page):
-                    print("Name: " + r[67:]) # Name
 
+                Name = ""
+                for r in re.findall(r'<span itemprop=\"name\">[\n].*', page):
+                    Name = r[67:] # ReleaseName
+                    print("Name: " + Name)
+
+                Formats = ""
                 print("\nFormats:")
                 for r in re.findall(r'format_exact=.*</a>', page):
                     for formats in re.findall(r'>.*<',r):
+                        Formats += formats[1:-1] + ", "
                         print(formats[1:-1]) # Format
+                Formats = Formats[:-2]
 
                 print("\nCountry: " + country)
 
+                Released = ""
                 print("\nReleased/Year: ")
                 for r in re.findall(r'&amp;year=[0-9]+', page):
                     for year in re.findall(r'[0-9]+',r):
+                        Released = year
                         print(year) # Released/Year
+
+                print("\n" + Name + " " + Formats + " " + Released)
+
+                # Try to execute a command.
+                cmd = "insert into releases(name,format,country,released) values('%s','%s','%s',%s)"%(Name, Formats, country, Released)
+                print(cmd)
+                exec_commit(db, cursor, cmd)
 
                 print("\nCredits:")
                 for r in re.findall(r'/artist/.*\">.*</a>', page):
@@ -141,7 +159,7 @@ def crawl_all():
 # Parses all the links and outputs to the SQL database.
 def parse_all():
     # Open a database connection.
-    db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="eestech")
+    db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="pdb", charset="utf8")
 
     threads = []
     t1 = threading.Thread(target=parse, args=("Serbia", "Serbia", db, ))
@@ -168,10 +186,10 @@ def parse_all():
     return
 
 # Open a database connection.
-db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="eestech")
+db = MySQLdb.connect(host="eestech-challenge-2018.mysql.database.azure.com", user="jnikolov@eestech-challenge-2018", passwd="1234ABcd", port=3306, database="pdb", charset="utf8")
 
-# Try parse Montenegro...
-parse("Montenegro", "Montenegro", db)
+# Parse test file "TEST"...
+parse("TEST", "TEST", db)
 
 # Disconnect from the server.
 db.close()
